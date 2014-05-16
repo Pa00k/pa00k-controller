@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:focusableInTouchMode="true">
+
+    <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:background="@android:color/darker_gray"
+            >
+
+        <ToggleButton
+                android:layout_width="match_parent"
+                android:layout_weight="1"
+                android:layout_height="50dp"
+                android:id="@+id/ctrl1"
+                android:checked="true"
+                android:textOn=""
+                android:textOff=""
+                android:background="@drawable/img_selector"/>
+
+        <ToggleButton
+                android:layout_width="match_parent"
+                android:layout_weight="1"
+                android:layout_height="50dp"
+                android:id="@+id/ctrl2"
+                android:textOn=""
+                android:textOff=""
+                android:background="@drawable/img_selector"/>
+
+        <ToggleButton
+                android:layout_width="match_parent"
+                android:layout_weight="1"
+                android:layout_height="50dp"
+                android:id="@+id/ctrl3"
+                android:textOn=""
+                android:textOff=""
+                android:background="@drawable/img_selector"/>
+
+        <ToggleButton
+                android:layout_height="50dp"
+                android:layout_width="match_parent"
+                android:layout_weight="1"
+                android:id="@+id/ctrl4"
+                android:textOn=""
+                android:textOff=""
+                android:background="@drawable/img_selector"/>
+
+
+    </LinearLayout>
+
+    <hr.vklabucar.Pa00k.DrawingLinearLayout
+            android:orientation="horizontal"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:background="@drawable/instructions"
+            android:id="@+id/drawingLinearLayout"
+
+            >
+
+        <View
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:id="@+id/gestureOverlayView1"
+                android:layout_weight="1"/>
+
+        <View
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:id="@+id/gestureOverlayView2"
+                android:layout_weight="1"/>
+
+    </hr.vklabucar.Pa00k.DrawingLinearLayout>
+
+</LinearLayout>
