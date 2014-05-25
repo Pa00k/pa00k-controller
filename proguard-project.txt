@@ -45,7 +45,7 @@
 #(org.xml.sax.EntityResolver)Class.forName(variable).newInstance()
 
 # -------- This should work for any project now without modifications just drop it in your project and you're set -------
-
+-dontwarn com.typesafe.config.**
 -dontwarn **$$anonfun$*
 -dontwarn scala.beans.ScalaBeanInfo
 -dontwarn scala.collection.generic.GenTraversableFactory

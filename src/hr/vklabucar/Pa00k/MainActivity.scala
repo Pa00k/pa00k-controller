@@ -197,15 +197,15 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
     finish()
   }
 
-  def genCtrls: String = {
-    val sb: StringBuilder = new StringBuilder
+  def genCtrls: Array[Byte] = {
+    var array = new Array[Byte](4)
 
-    for(ctrl <- ctrls) {
-      if(ctrl.isChecked) sb.append("1")
-      else sb.append("0")
+    for(i <- 0 to 3) {
+      if(ctrls(i).isChecked) array(i) = 1.toByte
+      else array(i) = 0.toByte
     }
 
-    sb.toString()
+    array
   }
 
   def genAcc: String = {
@@ -234,8 +234,7 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
         val output = socket.getOutputStream
 
         while (connected) {
-          Thread.sleep(50)
-          output.write(s"\n${genPair(p1, centre1)}, ${genPair(p2, centre2)}\n$genCtrls\n$genAcc".getBytes("US-ASCII"))
+          Thread.sleep(120)
 
           var x1 = genPair(p1, centre1)_1; x1 *= 100
           var y1 = genPair(p1, centre1)_2; y1 *= 100
@@ -245,6 +244,7 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
 
           output.write('P'.toByte)
           output.write(Array(x1.toByte, y1.toByte, x2.toByte, y2.toByte))
+          output.write(genCtrls)
 
         }
 
