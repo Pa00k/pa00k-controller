@@ -2,9 +2,9 @@ package hr.vklabucar.Pa00k
 
 import android.app.Activity
 import android.os.Bundle
-import android.view.{MotionEvent, View}
+import android.view.{KeyEvent, MotionEvent, View}
 import android.util.Log
-import android.view.View.OnTouchListener
+import android.view.View.{OnClickListener, OnTouchListener}
 import android.hardware.{Sensor, SensorEvent, SensorEventListener, SensorManager}
 import android.content.Context.SENSOR_SERVICE
 import android.content.{IntentFilter, Context, BroadcastReceiver, Intent}
@@ -12,7 +12,7 @@ import scala.actors.Actor
 import android.bluetooth.{BluetoothAdapter, BluetoothSocket, BluetoothDevice}
 import java.util.UUID
 import java.io.IOException
-import android.widget.ToggleButton
+import android.widget.{Toast, Button, ToggleButton}
 import scala.language.postfixOps
 
 
@@ -36,8 +36,11 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
   var az = 0d
   var a1 = 0
   var a2 = 0
+  var height = 3
+  var stride = 3
   
-  var ctrls = new Array[ToggleButton](4)
+  var ctrls = new Array[ToggleButton](2)
+  var toast: Toast = null
 
   var sensorManager: SensorManager = null
   var accelerometer: Sensor = null
@@ -53,10 +56,31 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
     super.onCreate(savedInstanceState)
     setContentView(R.layout.main)
 
-    ctrls(0) = findViewById(R.id.ctrl1).asInstanceOf[ToggleButton]
-    ctrls(1) = findViewById(R.id.ctrl2).asInstanceOf[ToggleButton]
-    ctrls(2) = findViewById(R.id.ctrl3).asInstanceOf[ToggleButton]
-    ctrls(3) = findViewById(R.id.ctrl4).asInstanceOf[ToggleButton]
+    val b_up = findViewById(R.id.ctrl1).asInstanceOf[Button]
+    val b_down = findViewById(R.id.ctrl2).asInstanceOf[Button]
+
+    ctrls(0) = findViewById(R.id.ctrl3).asInstanceOf[ToggleButton]
+    ctrls(1) = findViewById(R.id.ctrl4).asInstanceOf[ToggleButton]
+
+    b_up.setOnClickListener(new OnClickListener {
+      override def onClick(b: View): Unit = {
+        Log.d(TAG, s"UP: $height")
+
+        if (height < 5) height += 1
+
+        makeToast()
+      }
+    })
+
+    b_down.setOnClickListener(new OnClickListener {
+      override def onClick(b: View): Unit = {
+        Log.d(TAG, s"DOWN: $height")
+
+        if (height > 1) height -= 1
+
+        makeToast()
+      }
+    })
 
     BTadapter = BluetoothAdapter.getDefaultAdapter
 
@@ -112,6 +136,30 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
     connected = false
     sensorManager.unregisterListener(this)
     Log.d(TAG, "onPause")
+  }
+
+  override def onKeyDown(keyCode: Int, event: KeyEvent): Boolean = {
+    keyCode match {
+      case KeyEvent.KEYCODE_VOLUME_UP =>
+        Log.d(TAG, s"VOL UP: $stride")
+
+        if (stride < 5) stride += 1
+        makeToast()
+
+      case KeyEvent.KEYCODE_VOLUME_DOWN =>
+        Log.d(TAG, s"VOL DOWN: $stride")
+
+        if (stride > 1) stride -= 1
+        makeToast()
+    }
+
+    true
+  }
+
+  def makeToast(): Unit = {
+    if(toast != null) toast.cancel()
+    toast = Toast.makeText(MainActivity.this, s"HEIGHT: $height, STRIDE: $stride", Toast.LENGTH_SHORT)
+    toast.show()
   }
 
   def onTouch(view: View, event: MotionEvent): Boolean = {
@@ -175,7 +223,7 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
       ax = event.values(0)
       ay = event.values(1)
       az = event.values(2)
-      Log.d("ACC", s"x=$ax y=$ay z=$az")
+      //Log.d("ACC", s"x=$ax y=$ay z=$az")
     }
   }
 
@@ -198,9 +246,12 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
   }
 
   def genCtrls: Array[Byte] = {
-    var array = new Array[Byte](4)
+    val array = new Array[Byte](4)
 
-    for(i <- 0 to 3) {
+    array(0) = height.toByte
+    array(1) = stride.toByte
+
+    for(i <- 2 to 3) {
       if(ctrls(i).isChecked) array(i) = 1.toByte
       else array(i) = 0.toByte
     }
@@ -236,11 +287,11 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
         while (connected) {
           Thread.sleep(120)
 
-          var x1 = genPair(p1, centre1)_1; x1 *= 100
-          var y1 = genPair(p1, centre1)_2; y1 *= 100
+          var x1 = genPair(p1, centre1)._1; x1 *= 100
+          var y1 = genPair(p1, centre1)._2; y1 *= 100
 
-          var x2 = genPair(p2, centre2)_1; x2 *= 100
-          var y2 = genPair(p2, centre2)_2; y2 *= 100
+          var x2 = genPair(p2, centre2)._1; x2 *= 100
+          var y2 = genPair(p2, centre2)._2; y2 *= 100
 
           output.write('P'.toByte)
           output.write(Array(x1.toByte, y1.toByte, x2.toByte, y2.toByte))
