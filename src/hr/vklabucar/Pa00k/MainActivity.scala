@@ -21,21 +21,36 @@ case class Point (var x: Int, var y: Int)
 class MainActivity extends Activity with OnTouchListener with SensorEventListener {
 
   val TAG: String = "MainActivity"
+  val sleep = 150
   var BTadapter: BluetoothAdapter = null
   var connected: Boolean = true
   var mReceiver: BroadcastReceiver = null
 
+  // finger positions
   var p1 = Point(0,0)
   var p2 = Point(0,0)
   var centre1 = Point(0,0)
   var centre2 = Point(0,0)
   var relCentre1 = Point(0,0)
   var relCentre2 = Point(0,0)
+
+  // acceleration
   var ax = 0d
+  var ax_old = 0d
+  var ax_ev = 0d
+  var ax_ev_old = 0d
+
   var ay = 0d
-  var az = 0d
+  var ay_old = 0d
+  var ay_ev = 0d
+  var ay_ev_old = 0d
+
+
+  // alpha for the circles
   var a1 = 0
   var a2 = 0
+
+  // hexapod params
   var height = 3
   var stride = 3
   
@@ -88,7 +103,7 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
     val address = intent.getStringExtra("device_address")
 
     sensorManager = getSystemService(SENSOR_SERVICE).asInstanceOf[SensorManager]
-    accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+    accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
 
     findViewById(R.id.gestureOverlayView1).setOnTouchListener(this)
@@ -132,7 +147,12 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
 
   override def onPause() = {
     super.onPause()
-    this.unregisterReceiver(mReceiver)
+    try{
+      this.unregisterReceiver(mReceiver)
+    } catch {
+      case iae: IllegalArgumentException =>
+        Log.d(TAG, "IllegalArgumentException: mReceiver already unregistered. ")
+    }
     connected = false
     sensorManager.unregisterListener(this)
     Log.d(TAG, "onPause")
@@ -151,6 +171,14 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
 
         if (stride > 1) stride -= 1
         makeToast()
+
+      case KeyEvent.KEYCODE_BACK =>
+        connected = false
+        startActivity(new Intent("hr.vklabucar.SPLASH"))
+        finish()
+
+      case _ =>
+
     }
 
     true
@@ -194,7 +222,7 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
           case R.id.gestureOverlayView1 => p1.x = x; p1.y = y
           case R.id.gestureOverlayView2 => p2.x = x; p2.y = y
         }
-        Log.d("onTouch", s"ACTION MOVE p1: ${genPair(p1, centre1)}, p2: ${genPair(p2, centre2)}")
+        //Log.d("onTouch", s"ACTION MOVE p1: ${genPair(p1, centre1)}, p2: ${genPair(p2, centre2)}")
 
       case MotionEvent.ACTION_UP =>
 
@@ -219,13 +247,33 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
 
   override def onSensorChanged(event: SensorEvent) = {
 
-    if (event.sensor.getType == Sensor.TYPE_GYROSCOPE) {
-      ax = event.values(0)
-      ay = event.values(1)
-      az = event.values(2)
-      //Log.d("ACC", s"x=$ax y=$ay z=$az")
-    }
+    if (event.sensor.getType == Sensor.TYPE_ACCELEROMETER) {
+
+      // x signal through low pass
+      ax_ev = event.values(0)
+      ax = 0.82*ax + 0.09*ax_ev_old + 0.09*ax_ev
+      ax match {
+        case x if x > 4 => ax = 4
+        case x if x < -4 => ax = -4
+        case _ =>
+      }
+      ax_ev_old = ax_ev
+      ax_old = ax
+
+      // y signal through low poass
+      ay_ev = event.values(1)
+      ay  = 0.82*ay + 0.09*ay_ev_old + 0.09*ay_ev
+      ay match {
+        case y if y > 4 => ay = 4
+        case y if y < -4 => ay = -4
+        case _ =>
+      }
+      ay_ev_old = ay_ev
+      ay_old = ay
+
+     // Log.d("ACC", genAcc)
   }
+}
 
   def genPair(p1: Point, p2: Point)(implicit r: Int = 110): (Double, Double) = {
     var x: Float = (p1.x.toFloat - p2.x)/r
@@ -239,12 +287,6 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
 
   override def onAccuracyChanged(sensor: Sensor, acuracy: Int) = {}
 
-  override def onBackPressed() {
-    connected = false
-    startActivity(new Intent("hr.vklabucar.SPLASH"))
-    finish()
-  }
-
   def genCtrls: Array[Byte] = {
     val array = new Array[Byte](4)
 
@@ -252,16 +294,16 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
     array(1) = stride.toByte
 
     for(i <- 2 to 3) {
-      if(ctrls(i).isChecked) array(i) = 1.toByte
+      if(ctrls(i-2).isChecked) array(i) = 1.toByte
       else array(i) = 0.toByte
     }
 
     array
   }
 
-  def genAcc: String = {
-    s"x: ${(math floor ax*100)/100} y: ${(math floor ay*100)/100} z: ${(math floor az*100)/100}"
-  }
+  def genAcc: String = s"x: ${(math floor ax*100)/100} y: ${(math floor ay*100)/100}"
+
+  def genAccBytes: Array[Byte] = Array((math floor ax*10).toInt.toByte, (math floor ay*10).toInt.toByte)
 
   private class ConnectAndSendActor(MAC: String) extends Actor {
 
@@ -285,7 +327,7 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
         val output = socket.getOutputStream
 
         while (connected) {
-          Thread.sleep(120)
+          Thread.sleep(sleep)
 
           var x1 = genPair(p1, centre1)._1; x1 *= 100
           var y1 = genPair(p1, centre1)._2; y1 *= 100
@@ -293,9 +335,15 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
           var x2 = genPair(p2, centre2)._1; x2 *= 100
           var y2 = genPair(p2, centre2)._2; y2 *= 100
 
-          output.write('P'.toByte)
+          output.write('P'.toByte)     // start of the packet
+          // coordinates
           output.write(Array(x1.toByte, y1.toByte, x2.toByte, y2.toByte))
+          // mode controls
           output.write(genCtrls)
+          // send acceleration (only x & y)
+          output.write(genAccBytes)
+
+          Log.d(TAG, s"x1: $x1, y1: $y1 x2: $x2, y2: $y2, "+ genCtrls.toString + genAccBytes.toString )
 
         }
 
