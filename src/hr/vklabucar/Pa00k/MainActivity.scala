@@ -16,7 +16,7 @@ import android.widget.{Toast, Button, ToggleButton}
 import scala.language.postfixOps
 
 
-case class Point (var x: Int, var y: Int)
+case class Point(var x: Int, var y: Int)
 
 class MainActivity extends Activity with OnTouchListener with SensorEventListener {
 
@@ -27,14 +27,21 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
   var mReceiver: BroadcastReceiver = null
 
   // finger positions
-  var p1 = Point(0,0)
-  var p2 = Point(0,0)
-  var centre1 = Point(0,0)
-  var centre2 = Point(0,0)
-  var relCentre1 = Point(0,0)
-  var relCentre2 = Point(0,0)
+  var p1 = Point(0, 0)
+  var p2 = Point(0, 0)
+  var centre1 = Point(0, 0)
+  var centre2 = Point(0, 0)
+  var relCentre1 = Point(0, 0)
+  var relCentre2 = Point(0, 0)
 
-  // acceleration
+  //values for hexapod
+  var x1: Double = 0
+  var y1: Double = 0
+  var x2: Double = 0
+  var y2: Double = 0
+
+
+  // acceleration low pass filter
   var ax = 0d
   var ax_old = 0d
   var ax_ev = 0d
@@ -50,10 +57,14 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
   var a1 = 0
   var a2 = 0
 
-  // hexapod params
+  // hexapod params and limits
   var height = 3
-  var stride = 3
-  
+  var stride = 1
+  val hMax = 5
+  val hMin = 1
+  val sMax = 3
+  val sMin = 1
+
   var ctrls = new Array[ToggleButton](2)
   var toast: Toast = null
 
@@ -81,7 +92,7 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
       override def onClick(b: View): Unit = {
         Log.d(TAG, s"UP: $height")
 
-        if (height < 5) height += 1
+        if (height < hMax) height += 1
 
         makeToast()
       }
@@ -91,7 +102,7 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
       override def onClick(b: View): Unit = {
         Log.d(TAG, s"DOWN: $height")
 
-        if (height > 1) height -= 1
+        if (height > hMin) height -= 1
 
         makeToast()
       }
@@ -111,10 +122,10 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
     drawingLinearLayout = findViewById(R.id.drawingLinearLayout).asInstanceOf[DrawingLinearLayout]
 
     mReceiver = new BroadcastReceiver() {
-      def onReceive( context: Context,  intent: Intent): Unit = {
+      def onReceive(context: Context, intent: Intent): Unit = {
 
         val action: String = intent.getAction
-        Log.d(TAG, "Intent: "+intent.toString)
+        Log.d(TAG, "Intent: " + intent.toString)
         action match {
           case BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED | BluetoothDevice.ACTION_ACL_DISCONNECTED =>
 
@@ -122,7 +133,7 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
             MainActivity.this.finish()
 
           case BluetoothDevice.ACTION_UUID | BluetoothDevice.EXTRA_UUID =>
-            Log.d(TAG, "UUID intents: " + intent.getExtras.get("android.bluetooth.device.extra.DEVICE") + " " +intent.getExtras.get("android.bluetooth.device.extra.UUID"))
+            Log.d(TAG, "UUID intents: " + intent.getExtras.get("android.bluetooth.device.extra.DEVICE") + " " + intent.getExtras.get("android.bluetooth.device.extra.UUID"))
 
 
         }
@@ -147,7 +158,7 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
 
   override def onPause() = {
     super.onPause()
-    try{
+    try {
       this.unregisterReceiver(mReceiver)
     } catch {
       case iae: IllegalArgumentException =>
@@ -163,13 +174,13 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
       case KeyEvent.KEYCODE_VOLUME_UP =>
         Log.d(TAG, s"VOL UP: $stride")
 
-        if (stride < 5) stride += 1
+        if (stride < sMax) stride += 1
         makeToast()
 
       case KeyEvent.KEYCODE_VOLUME_DOWN =>
         Log.d(TAG, s"VOL DOWN: $stride")
 
-        if (stride > 1) stride -= 1
+        if (stride > sMin) stride -= 1
         makeToast()
 
       case KeyEvent.KEYCODE_BACK =>
@@ -185,7 +196,7 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
   }
 
   def makeToast(): Unit = {
-    if(toast != null) toast.cancel()
+    if (toast != null) toast.cancel()
     toast = Toast.makeText(MainActivity.this, s"HEIGHT: $height, STRIDE: $stride", Toast.LENGTH_SHORT)
     toast.show()
   }
@@ -196,7 +207,7 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
     val relY = event.getY.toInt
 
     event.getAction match {
-      case MotionEvent.ACTION_DOWN  =>
+      case MotionEvent.ACTION_DOWN =>
 
         view.getId match {
           case R.id.gestureOverlayView1 =>
@@ -217,10 +228,23 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
         }
         Log.d("onTouch", s"ACTION DOWN centre1: $centre1, centre2: $centre2")
         return true
-      case MotionEvent.ACTION_MOVE  =>
+      case MotionEvent.ACTION_MOVE =>
         view.getId match {
-          case R.id.gestureOverlayView1 => p1.x = x; p1.y = y
-          case R.id.gestureOverlayView2 => p2.x = x; p2.y = y
+          case R.id.gestureOverlayView1 =>
+            p1.x = x; p1.y = y
+            // set x1 and y1
+            x1 = genPair(p1, centre1)._1
+            x1 *= 100
+            y1 = genPair(p1, centre1)._2
+            y1 *= 100
+          case R.id.gestureOverlayView2 =>
+            p2.x = x; p2.y = y
+            //set x2 and y2
+            x2 = genPair(p2, centre2)._1
+            x2 *= 100
+            y2 = genPair(p2, centre2)._2
+            y2 *= 100
+
         }
         //Log.d("onTouch", s"ACTION MOVE p1: ${genPair(p1, centre1)}, p2: ${genPair(p2, centre2)}")
 
@@ -232,11 +256,13 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
             p1.y = centre1.y
             a1 = 0
             drawingLinearLayout.hideCircle(a1, a2)
+            x1 = 0; y1 = 0
           case R.id.gestureOverlayView2 =>
             p2.x = centre2.x
             p2.y = centre2.y
             a2 = 0
             drawingLinearLayout.hideCircle(a1, a2)
+            x2 = 0; y2 = 0
         }
         Log.d("onTouch", s"ACTION_UP p1: $p1, p2: $p2")
 
@@ -251,7 +277,7 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
 
       // x signal through low pass
       ax_ev = event.values(0)
-      ax = 0.82*ax + 0.09*ax_ev_old + 0.09*ax_ev
+      ax = 0.82 * ax + 0.09 * ax_ev_old + 0.09 * ax_ev
       ax match {
         case x if x > 4 => ax = 4
         case x if x < -4 => ax = -4
@@ -262,7 +288,7 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
 
       // y signal through low poass
       ay_ev = event.values(1)
-      ay  = 0.82*ay + 0.09*ay_ev_old + 0.09*ay_ev
+      ay = 0.82 * ay + 0.09 * ay_ev_old + 0.09 * ay_ev
       ay match {
         case y if y > 4 => ay = 4
         case y if y < -4 => ay = -4
@@ -271,18 +297,18 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
       ay_ev_old = ay_ev
       ay_old = ay
 
-     // Log.d("ACC", genAcc)
+      // Log.d("ACC", genAcc)
+    }
   }
-}
 
   def genPair(p1: Point, p2: Point)(implicit r: Int = 110): (Double, Double) = {
-    var x: Float = (p1.x.toFloat - p2.x)/r
-    var y: Float = (p2.y - p1.y.toFloat  )/r
+    var x: Float = (p1.x.toFloat - p2.x) / r
+    var y: Float = (p2.y - p1.y.toFloat) / r
 
     if (x > 1) x = 1f else if (x < -1) x = -1f
     if (y > 1) y = 1f else if (y < -1) y = -1f
 
-    ((math floor x*100)/100, (math floor y*100)/100)
+    ((math floor x * 100) / 100, (math floor y * 100) / 100)
   }
 
   override def onAccuracyChanged(sensor: Sensor, acuracy: Int) = {}
@@ -293,17 +319,17 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
     array(0) = height.toByte
     array(1) = stride.toByte
 
-    for(i <- 2 to 3) {
-      if(ctrls(i-2).isChecked) array(i) = 1.toByte
+    for (i <- 2 to 3) {
+      if (ctrls(i - 2).isChecked) array(i) = 1.toByte
       else array(i) = 0.toByte
     }
 
     array
   }
 
-  def genAcc: String = s"x: ${(math floor ax*100)/100} y: ${(math floor ay*100)/100}"
+  def genAcc: String = s"x: ${(math floor ax * 100) / 100} y: ${(math floor ay * 100) / 100}"
 
-  def genAccBytes: Array[Byte] = Array((math floor ax*10).toInt.toByte, (math floor ay*10).toInt.toByte)
+  def genAccBytes: Array[Byte] = Array((math floor ax * 10).toInt.toByte, (math floor ay * 10).toInt.toByte)
 
   private class ConnectAndSendActor(MAC: String) extends Actor {
 
@@ -312,11 +338,12 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
 
 
     Log.d(TAG, " ConnectAndSend Actor created.")
+
     def act() = {
       BTadapter.cancelDiscovery()
       Log.d(TAG, " ConnectAndSend Actor started.")
 
-      if(socket == null) {
+      if (socket == null) {
         Log.d(TAG, " Socket is null !   exiting ....")
         exit()
       }
@@ -329,13 +356,7 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
         while (connected) {
           Thread.sleep(sleep)
 
-          var x1 = genPair(p1, centre1)._1; x1 *= 100
-          var y1 = genPair(p1, centre1)._2; y1 *= 100
-
-          var x2 = genPair(p2, centre2)._1; x2 *= 100
-          var y2 = genPair(p2, centre2)._2; y2 *= 100
-
-          output.write('P'.toByte)     // start of the packet
+          output.write('P'.toByte) // start of the packet
           // coordinates
           output.write(Array(x1.toByte, y1.toByte, x2.toByte, y2.toByte))
           // mode controls
@@ -343,7 +364,7 @@ class MainActivity extends Activity with OnTouchListener with SensorEventListene
           // send acceleration (only x & y)
           output.write(genAccBytes)
 
-          Log.d(TAG, s"x1: $x1, y1: $y1 x2: $x2, y2: $y2, "+ genCtrls.toString + genAccBytes.toString )
+          //Log.d(TAG, s"x1: ${x1.toByte}, y1: ${y1.toByte} x2: ${x2.toByte}, y2: ${y2.toByte}, "+ genCtrls.toString + genAccBytes.toString )
 
         }
 
