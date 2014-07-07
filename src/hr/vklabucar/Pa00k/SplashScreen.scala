@@ -90,7 +90,7 @@ class SplashScreen extends Activity {
           case BluetoothAdapter.ACTION_DISCOVERY_FINISHED =>
 
             Log.d(TAG, "BroadcastReceiver: Discovery finished.")
-            title.setText("Select Pa00k to drive :)")
+            title.setText("Select a Pa00k to drive :)")
 
             if(mArrayAdapter.getCount == 0) mArrayAdapter.add("No devices.")
             findViewById(R.id.progress).setVisibility(View.INVISIBLE)

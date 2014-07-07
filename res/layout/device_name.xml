@@ -5,4 +5,5 @@
           android:layout_height="wrap_content"
           android:textSize="19sp"
           android:padding="6dp"
+          android:textColor="@android:color/black"
         />

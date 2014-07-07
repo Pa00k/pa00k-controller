@@ -21,7 +21,7 @@
                 android:checked="true"
                 android:textOn=""
                 android:textOff=""
-                android:background="@drawable/img_selector_button"/>
+                android:background="@drawable/up_selector"/>
 
         <Button
                 android:layout_width="match_parent"
@@ -30,7 +30,7 @@
                 android:id="@+id/ctrl2"
                 android:textOn=""
                 android:textOff=""
-                android:background="@drawable/img_selector_button"/>
+                android:background="@drawable/down_selector"/>
 
         <ToggleButton
                 android:layout_width="match_parent"
@@ -39,7 +39,7 @@
                 android:id="@+id/ctrl3"
                 android:textOn=""
                 android:textOff=""
-                android:background="@drawable/img_selector_toggle"/>
+                android:background="@drawable/rot_1_selector"/>
 
         <ToggleButton
                 android:layout_height="50dp"
@@ -48,7 +48,7 @@
                 android:id="@+id/ctrl4"
                 android:textOn=""
                 android:textOff=""
-                android:background="@drawable/img_selector_toggle"/>
+                android:background="@drawable/rot_2_selector"/>
 
 
     </LinearLayout>
@@ -57,7 +57,7 @@
             android:orientation="horizontal"
             android:layout_width="fill_parent"
             android:layout_height="fill_parent"
-            android:background="@drawable/instructions"
+            android:background="@drawable/control_board"
             android:id="@+id/drawingLinearLayout"
 
             >

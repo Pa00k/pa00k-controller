@@ -23,7 +23,7 @@
             android:layout_width="match_parent"
             android:layout_height="37dp"
             android:orientation="horizontal"
-            android:background="#ff500089"
+            android:background="#ffc1c1bb"
             android:padding="5dp">
 
     <TextView android:id="@+id/title_new_devices"
@@ -32,7 +32,7 @@
               android:text="Press scan."
               android:typeface="sans"
               android:textSize="20sp"
-              android:textColor="#fff"
+              android:textColor="#ff000000"
               android:layout_alignParentLeft="true"/>
 
         <ProgressBar android:id="@+id/progress"
@@ -41,6 +41,7 @@
                 android:layout_height="fill_parent"
                 android:layout_alignParentRight="true"
                 android:visibility="invisible"
+
                 />
 
     </RelativeLayout>
@@ -49,12 +50,15 @@
               android:layout_width="fill_parent"
               android:layout_height="0dp"
               android:layout_weight="1"
-            />
+              android:background="@drawable/logo_background"/>
     <Button
             android:id="@+id/scan"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:text="Scan"
-            android:layout_gravity="bottom"/>
+            android:textSize="20sp"
+            android:fontFamily="sans-serif"
+            android:layout_gravity="bottom"
+            android:background="@drawable/scan_selector"/>
 
 </LinearLayout>

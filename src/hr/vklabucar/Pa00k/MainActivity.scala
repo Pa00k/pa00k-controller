@@ -21,7 +21,7 @@ case class Point(var x: Int, var y: Int)
 class MainActivity extends Activity with OnTouchListener with SensorEventListener {
 
   val TAG: String = "MainActivity"
-  val sleep = 150
+  val sleep = 120
   var BTadapter: BluetoothAdapter = null
   var connected: Boolean = true
   var mReceiver: BroadcastReceiver = null
