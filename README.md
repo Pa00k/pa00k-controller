@@ -5,6 +5,8 @@ This is an Android app for driving the open hardware and open source hexapod mad
 
 The final result can be seen here: https://www.youtube.com/watch?v=Zqb1OARsSNA
 
-Winner of Elektroboj 2014 competition. 
+Winner of Elektroboj 2014 competition.
+
+UI design by: Sara Pavleković Preis
 
 Cost of components ~ 180 USD
